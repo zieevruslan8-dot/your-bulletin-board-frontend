@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Доска объявлений — Главная</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>Доска объявлений (Услуги)</h1>
+    <nav>
+      <a href="index.html">Главная</a>
+      <a href="add.html" class="btn">Добавить объявление</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="adsList" class="grid"></section>
+    <div id="empty" class="empty">Объявлений пока нет — будь первым!</div>
+  </main>
+
+  <footer>
+    <small>Сайт объявлений — demo</small>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    // Замените на URL вашего backend (Render). Пример:
+    // const API_BASE = "https://services-ads-backend.onrender.com";
+    // Если backend запущен в корне, добавляем /api
+    if (!window.API_BASE) window.API_BASE = "https://services-ads-backend.onrender.com";
+  </script>
+</body>
+</html>
