@@ -1,6 +1,3 @@
-// script.js
-// Замените API_BASE на адрес вашего backend, если нужно:
-// const API_BASE = "https://services-ads-backend.onrender.com";
 const API_BASE = window.API_BASE || "https://services-ads-backend.onrender.com";
 const ADS_ENDPOINT = API_BASE + "/api/ads";
 
