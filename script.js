@@ -1,4 +1,4 @@
-const API_BASE = window.API_BASE || "https://services-ads-backend.onrender.com";
+const API_BASE = window.API_BASE || "https://services-ads-backend.onrender.com/api';
 const ADS_ENDPOINT = API_BASE + "/api/ads";
 
 async function loadAds() {
@@ -32,7 +32,6 @@ function renderAds(ads) {
     body.innerHTML = `<h3>${escapeHtml(ad.title || '')}</h3>
                       <p class="desc">${escapeHtml(ad.description || '')}</p>
                       <p class="meta">${ad.username ? escapeHtml(ad.username) + ' • ' : ''}${ad.price ? ad.price + ' ₽' : ''}</p>
-                      <p class="contacts">📞 ${escapeHtml(ad.contacts || 'Контакты не указаны')}</p>
                       <time>${new Date(ad.created_at || ad.createdAt || Date.now()).toLocaleString()}</time>`;
     card.appendChild(img);
     card.appendChild(body);
@@ -60,11 +59,11 @@ async function handleAddForm(e) {
   const title = form.title.value.trim();
   const description = form.description.value.trim();
   const price = form.price.value ? parseFloat(form.price.value) : null;
-  const contacts = form.contacts.value.trim(); // ← ДОБАВЛЕНО
   const file = form.image.files[0];
   try {
-    const imageUrl = await fileToDataURL(file);
-    const payload = { title, description, price, contacts, imageUrl }; // ← ДОБАВЛЕНО contacts
+    const imageUrl = await fileToDataURL(file); // может быть null
+    const payload = { title, description, price, imageUrl };
+    // NOTE: owner / user handling not implemented on frontend (anonymous)
     const res = await fetch(ADS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
