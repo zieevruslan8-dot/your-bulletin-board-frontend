@@ -24,3 +24,9 @@ input[type="text"],input[type="number"],textarea,input[type="file"]{width:100%;p
 footer{padding:12px;text-align:center;color:var(--muted);font-size:13px}
 .status{margin-top:10px}
 .error{color:#b00020}
+.contacts {
+    color: #2c5aa0;
+    font-weight: bold;
+    margin: 5px 0;
+    font-size: 14px;
+}
