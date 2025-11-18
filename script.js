@@ -1,4 +1,4 @@
-const API_BASE = window.API_BASE || "https://services-ads-backend.onrender.com/api';
+const API_BASE = window.API_BASE || "https://services-ads-backend.onrender.com";
 const ADS_ENDPOINT = API_BASE + "/api/ads";
 
 async function loadAds() {
@@ -61,9 +61,8 @@ async function handleAddForm(e) {
   const price = form.price.value ? parseFloat(form.price.value) : null;
   const file = form.image.files[0];
   try {
-    const imageUrl = await fileToDataURL(file); // может быть null
+    const imageUrl = await fileToDataURL(file);
     const payload = { title, description, price, imageUrl };
-    // NOTE: owner / user handling not implemented on frontend (anonymous)
     const res = await fetch(ADS_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +79,6 @@ async function handleAddForm(e) {
   }
 }
 
-// Auto-run depending on page
 document.addEventListener('DOMContentLoaded', () => {
   if (window.PAGE === 'add') {
     const form = document.getElementById('adForm');
