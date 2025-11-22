@@ -6,7 +6,7 @@
 
 body {
   font-family: Arial, sans-serif;
-  line-height: 1.6;
+  line-height: 1.4;
   color: #333;
   max-width: 1200px;
   margin: 0 auto;
@@ -75,4 +75,11 @@ button {
   padding: 1rem;
   border: 1px solid red;
   border-radius: 4px;
+}
+
+.contacts {
+  color: #2c5aa0;
+  font-weight: bold;
+  margin: 5px 0;
+  font-size: 14px;
 }
