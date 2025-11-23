@@ -42,31 +42,41 @@ function renderAds(ads) {
     ads.forEach(ad => {
         const card = document.createElement('article');
         card.className = 'card';
+        
+        const imgContainer = document.createElement('div');
+        imgContainer.className = 'card-image-container';
+        
         const img = document.createElement('img');
         img.alt = ad.title || 'Фото';
         img.src = ad.imageUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="100%" height="100%" fill="%23EEE"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23999">No image</text></svg>';
-        const body = document.createElement('div');
-        body.className = 'card-body';
         
         const isAuthor = currentAuthorId === ad.authorId;
         
-        body.innerHTML = `<div class="card-header">
-                            <h3>${escapeHtml(ad.title || '')}</h3>
-                            ${isAuthor ? `
-                            <div class="card-menu">
-                                <button class="menu-btn" onclick="toggleMenu('${ad._id}')">⋮</button>
-                                <div class="menu-dropdown" id="menu-${ad._id}">
-                                    <button onclick="editAd('${ad._id}')">✏️ Редактировать</button>
-                                    <button onclick="deleteAd('${ad._id}')">🗑️ Удалить</button>
-                                </div>
-                            </div>
-                            ` : ''}
-                          </div>
+        // Добавляем меню в контейнер изображения
+        if (isAuthor) {
+            const imageMenu = document.createElement('div');
+            imageMenu.className = 'image-menu';
+            imageMenu.innerHTML = `
+                <button class="menu-btn" onclick="toggleMenu('${ad._id}')">⋮</button>
+                <div class="menu-dropdown" id="menu-${ad._id}">
+                    <button onclick="editAd('${ad._id}')">✏️ Редактировать</button>
+                    <button onclick="deleteAd('${ad._id}')">🗑️ Удалить</button>
+                </div>
+            `;
+            imgContainer.appendChild(imageMenu);
+        }
+        
+        imgContainer.appendChild(img);
+        
+        const body = document.createElement('div');
+        body.className = 'card-body';
+        body.innerHTML = `<h3>${escapeHtml(ad.title || '')}</h3>
                           <p class="desc">${escapeHtml(ad.description || '')}</p>
                           <p class="meta">${ad.price ? ad.price + ' ₽' : ''}</p>
                           <p class="contacts">📞 ${escapeHtml(ad.contacts || 'Контакты не указаны')}</p>
                           <time>${new Date(ad.createdAt).toLocaleString()}</time>`;
-        card.appendChild(img);
+        
+        card.appendChild(imgContainer);
         card.appendChild(body);
         container.appendChild(card);
     });
@@ -92,7 +102,7 @@ function toggleMenu(adId) {
 
 // Закрываем меню при клике вне его
 document.addEventListener('click', function(e) {
-    if (!e.target.closest('.card-menu')) {
+    if (!e.target.closest('.image-menu')) {
         document.querySelectorAll('.menu-dropdown').forEach(menu => {
             menu.style.display = 'none';
         });
