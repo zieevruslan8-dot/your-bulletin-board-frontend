@@ -1,48 +1,146 @@
-import express from 'express';
-import Ad from '../models/Ad.js';
+const API_BASE = window.API_BASE || "https://services-ads-backend.onrender.com";
+const ADS_ENDPOINT = API_BASE + "/api/ads";
 
-const router = express.Router();
+// Генерация ID автора
+function generateAuthorId() {
+    return 'user_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+}
 
-// GET /api/ads - получить все объявления
-router.get('/', async (req, res) => {
-    try {
-        const ads = await Ad.find().sort({ createdAt: -1 });
-        res.json(ads);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
+// Получить ID автора
+function getAuthorId() {
+    let authorId = localStorage.getItem('authorId');
+    if (!authorId) {
+        authorId = generateAuthorId();
+        localStorage.setItem('authorId', authorId);
     }
-});
+    return authorId;
+}
 
-// POST /api/ads - создать объявление
-router.post('/', async (req, res) => {
+async function loadAds() {
     try {
-        const { title, description, price, imageUrl, contacts, authorId } = req.body;
-        const ad = new Ad({ title, description, price, imageUrl, contacts, authorId });
-        await ad.save();
-        res.status(201).json(ad);
+        const res = await fetch(ADS_ENDPOINT);
+        const data = await res.json();
+        renderAds(Array.isArray(data) ? data : []);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        document.getElementById('adsList').innerHTML = `<div class="error">Ошибка загрузки объявлений: ${err.message}</div>`;
     }
-});
+}
 
-// DELETE /api/ads/:id - удалить объявление
-router.delete('/:id', async (req, res) => {
+function renderAds(ads) {
+    const container = document.getElementById('adsList');
+    const empty = document.getElementById('empty');
+    if (!container) return;
+    container.innerHTML = '';
+    if (!ads || ads.length === 0) {
+        empty.style.display = 'block';
+        return;
+    }
+    empty.style.display = 'none';
+    
+    const currentAuthorId = getAuthorId();
+    
+    ads.forEach(ad => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        const img = document.createElement('img');
+        img.alt = ad.title || 'Фото';
+        img.src = ad.imageUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200"><rect width="100%" height="100%" fill="%23EEE"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%23999">No image</text></svg>';
+        const body = document.createElement('div');
+        body.className = 'card-body';
+        
+        const isAuthor = currentAuthorId === ad.authorId;
+        
+        body.innerHTML = `<h3>${escapeHtml(ad.title || '')}</h3>
+                          <p class="desc">${escapeHtml(ad.description || '')}</p>
+                          <p class="meta">${ad.price ? ad.price + ' ₽' : ''}</p>
+                          <p class="contacts">📞 ${escapeHtml(ad.contacts || 'Контакты не указаны')}</p>
+                          ${isAuthor ? `
+                          <div class="ad-actions">
+                              <button class="btn-delete" onclick="deleteAd('${ad._id}')">🗑️ Удалить</button>
+                          </div>
+                          ` : ''}
+                          <time>${new Date(ad.createdAt).toLocaleString()}</time>`;
+        card.appendChild(img);
+        card.appendChild(body);
+        container.appendChild(card);
+    });
+}
+
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
+async function fileToDataURL(file) {
+    return new Promise((res, rej) => {
+        if (!file) return res(null);
+        const reader = new FileReader();
+        reader.onload = () => res(reader.result);
+        reader.onerror = err => rej(err);
+        reader.readAsDataURL(file);
+    });
+}
+
+async function handleAddForm(e) {
+    e.preventDefault();
+    const form = e.target;
+    const status = document.getElementById('status');
+    status.textContent = 'Отправка...';
+    
+    const title = form.title.value.trim();
+    const description = form.description.value.trim();
+    const price = form.price.value ? parseFloat(form.price.value) : null;
+    const contacts = form.contacts.value.trim();
+    const file = form.image.files[0];
+    const authorId = getAuthorId();
+    
     try {
-        const ad = await Ad.findById(req.params.id);
-        if (!ad) {
-            return res.status(404).json({ message: 'Объявление не найдено' });
+        const imageUrl = await fileToDataURL(file);
+        const payload = { title, description, price, contacts, imageUrl, authorId };
+        
+        const res = await fetch(ADS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+            const err = await res.json().catch(()=>({message: res.statusText}));
+            throw new Error(err.message || 'Ошибка сервера');
         }
-
-        const authorId = req.headers['author-id'];
-        if (ad.authorId !== authorId) {
-            return res.status(403).json({ message: 'Недостаточно прав' });
-        }
-
-        await Ad.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Объявление удалено' });
+        status.textContent = 'Объявление опубликовано!';
+        setTimeout(()=> location.href = 'index.html', 800);
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        status.textContent = 'Ошибка: ' + err.message;
+    }
+}
+
+// Удаление объявления
+async function deleteAd(adId) {
+    if (!confirm('Удалить это объявление?')) return;
+    
+    try {
+        const authorId = getAuthorId();
+        const res = await fetch(`${ADS_ENDPOINT}/${adId}`, {
+            method: 'DELETE',
+            headers: {
+                'author-id': authorId
+            }
+        });
+        
+        if (res.ok) {
+            loadAds();
+        } else {
+            const error = await res.json();
+            alert('Ошибка: ' + error.message);
+        }
+    } catch (err) {
+        alert('Ошибка: ' + err.message);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.PAGE === 'add') {
+        const form = document.getElementById('adForm');
+        form.addEventListener('submit', handleAddForm);
+    } else {
+        loadAds();
     }
 });
-
-export default router;
