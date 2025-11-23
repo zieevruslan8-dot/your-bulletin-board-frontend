@@ -50,20 +50,58 @@ function renderAds(ads) {
         
         const isAuthor = currentAuthorId === ad.authorId;
         
-        body.innerHTML = `<h3>${escapeHtml(ad.title || '')}</h3>
+        body.innerHTML = `<div class="card-header">
+                            <h3>${escapeHtml(ad.title || '')}</h3>
+                            ${isAuthor ? `
+                            <div class="card-menu">
+                                <button class="menu-btn" onclick="toggleMenu('${ad._id}')">⋮</button>
+                                <div class="menu-dropdown" id="menu-${ad._id}">
+                                    <button onclick="editAd('${ad._id}')">✏️ Редактировать</button>
+                                    <button onclick="deleteAd('${ad._id}')">🗑️ Удалить</button>
+                                </div>
+                            </div>
+                            ` : ''}
+                          </div>
                           <p class="desc">${escapeHtml(ad.description || '')}</p>
                           <p class="meta">${ad.price ? ad.price + ' ₽' : ''}</p>
                           <p class="contacts">📞 ${escapeHtml(ad.contacts || 'Контакты не указаны')}</p>
-                          ${isAuthor ? `
-                          <div class="ad-actions">
-                              <button class="btn-delete" onclick="deleteAd('${ad._id}')">🗑️ Удалить</button>
-                          </div>
-                          ` : ''}
                           <time>${new Date(ad.createdAt).toLocaleString()}</time>`;
         card.appendChild(img);
         card.appendChild(body);
         container.appendChild(card);
     });
+}
+
+// Функции для меню с тремя точками
+function toggleMenu(adId) {
+    const menu = document.getElementById(`menu-${adId}`);
+    const allMenus = document.querySelectorAll('.menu-dropdown');
+    
+    // Закрываем все другие меню
+    allMenus.forEach(m => {
+        if (m.id !== `menu-${adId}`) m.style.display = 'none';
+    });
+    
+    // Переключаем текущее меню
+    if (menu.style.display === 'block') {
+        menu.style.display = 'none';
+    } else {
+        menu.style.display = 'block';
+    }
+}
+
+// Закрываем меню при клике вне его
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.card-menu')) {
+        document.querySelectorAll('.menu-dropdown').forEach(menu => {
+            menu.style.display = 'none';
+        });
+    }
+});
+
+// Функция редактирования - переходим на страницу редактирования
+function editAd(adId) {
+    window.location.href = `edit.html?id=${adId}`;
 }
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
@@ -136,11 +174,84 @@ async function deleteAd(adId) {
     }
 }
 
+// Функции для страницы редактирования
+if (window.PAGE === 'edit') {
+    const form = document.getElementById('editForm');
+    const adId = window.EDIT_AD_ID;
+    
+    // Загружаем данные объявления
+    loadAdForEdit(adId);
+    
+    form.addEventListener('submit', handleEditForm);
+}
+
+async function loadAdForEdit(adId) {
+    try {
+        const res = await fetch(`${ADS_ENDPOINT}/${adId}`);
+        if (!res.ok) throw new Error('Объявление не найдено');
+        
+        const ad = await res.json();
+        
+        // Заполняем форму данными
+        document.getElementById('title').value = ad.title || '';
+        document.getElementById('description').value = ad.description || '';
+        document.getElementById('price').value = ad.price || '';
+        document.getElementById('contacts').value = ad.contacts || '';
+    } catch (err) {
+        alert('Ошибка загрузки: ' + err.message);
+        location.href = 'index.html';
+    }
+}
+
+async function handleEditForm(e) {
+    e.preventDefault();
+    const form = e.target;
+    const status = document.getElementById('status');
+    status.textContent = 'Сохранение...';
+    
+    const title = form.title.value.trim();
+    const description = form.description.value.trim();
+    const price = form.price.value ? parseFloat(form.price.value) : null;
+    const contacts = form.contacts.value.trim();
+    const file = form.image.files[0];
+    const adId = window.EDIT_AD_ID;
+    
+    try {
+        let imageUrl = undefined;
+        if (file) {
+            imageUrl = await fileToDataURL(file);
+        }
+        
+        const payload = { title, description, price, contacts };
+        if (imageUrl) payload.imageUrl = imageUrl;
+        
+        const authorId = getAuthorId();
+        const res = await fetch(`${ADS_ENDPOINT}/${adId}`, {
+            method: 'PUT',
+            headers: { 
+                'Content-Type': 'application/json',
+                'author-id': authorId
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        if (!res.ok) {
+            const err = await res.json().catch(()=>({message: res.statusText}));
+            throw new Error(err.message || 'Ошибка сервера');
+        }
+        
+        status.textContent = '✅ Объявление обновлено!';
+        setTimeout(() => location.href = 'index.html', 1000);
+    } catch (err) {
+        status.textContent = '❌ Ошибка: ' + err.message;
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     if (window.PAGE === 'add') {
         const form = document.getElementById('adForm');
         form.addEventListener('submit', handleAddForm);
-    } else {
+    } else if (window.PAGE !== 'edit') {
         loadAds();
     }
 });
